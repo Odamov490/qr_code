@@ -1,248 +1,105 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="uz">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Admin — PDF yuklash</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin — QR & PDF</title>
 
-  <link rel="stylesheet" href="assets/style.css" />
+  <!-- Stil -->
+  <link rel="stylesheet" href="assets/style.css">
 
+  <!-- QRCode kutubxonasi (MUHIM) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
-    integrity="sha512-CNgIRecPoPFcAckU4iigFsMghvYDn8ApX2HFqRSbuuSSMzdg3NofM8JrIoVNewc0hXtF87Qy4V/mQJu1WDVYjA=="
-    crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-
-  <style>
-    .wrap{max-width:900px;margin:0 auto;padding:18px}
-    .head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
-    .head .sp{flex:1}
-    .grid{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-top:14px}
-    @media(max-width:900px){.grid{grid-template-columns:1fr}}
-    .status{margin-top:10px;font-size:13px;color:var(--muted);line-height:1.4}
-    .status.ok{color:#065f46}
-    .status.bad{color:#b91c1c}
-    .mini{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-    .qrwrap{display:flex;flex-direction:column;gap:10px}
-    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break:break-all}
-  </style>
+          crossorigin="anonymous"></script>
 </head>
 
 <body>
-  <div class="wrap">
-    <div class="card">
-      <div class="head">
-        <div>
-          <h1 style="margin:0 0 6px 0">Admin</h1>
-          <div class="muted small">ID + PDF + Token → GitHub repo’ga yuklaydi (docs/pdfs/ID.pdf) va manifestni yangilaydi.</div>
-        </div>
-        <div class="sp"></div>
-        <a class="btn secondary" href="index.html">Ro‘yxat</a>
-      </div>
+<main class="container">
+  <div class="card">
 
-      <div class="grid">
-        <!-- LEFT -->
-        <div class="card" style="margin:0">
-          <div class="muted small">ID</div>
-          <input id="id" placeholder="Masalan: ESW8-000124" />
-
-          <div style="height:10px"></div>
-          <div class="muted small">PDF faylni tanlang</div>
-          <input id="pdfFile" type="file" accept="application/pdf" />
-
-          <div style="height:10px"></div>
-          <div class="muted small">GitHub Token (fine-grained, Contents: Read & Write)</div>
-          <input id="ghToken" type="password" placeholder="Token..." />
-
-          <div class="mini">
-            <button class="btn" id="uploadBtn">⬆️ Yuklash</button>
-            <button class="btn secondary" id="qrBtn">QR ko‘rsatish</button>
-            <button class="btn secondary" id="qrPngBtn">QR PNG</button>
-          </div>
-
-          <div id="uploadStatus" class="status">—</div>
-        </div>
-
-        <!-- RIGHT -->
-        <div class="card qrwrap" style="margin:0">
-          <div class="muted small">QR link</div>
-          <div class="mono" id="link">—</div>
-          <div id="qr" class="qrbox"></div>
-        </div>
-      </div>
+    <div class="row">
+      <h1>Admin</h1>
+      <a class="btn secondary" href="index.html">Ro‘yxat</a>
     </div>
+
+    <!-- ID -->
+    <label>ID</label>
+    <input id="docId" placeholder="Masalan: NX5">
+
+    <!-- PDF -->
+    <label>PDF faylni tanlang</label>
+    <input type="file" id="pdfFile" accept="application/pdf">
+
+    <!-- Token -->
+    <label>GitHub Token</label>
+    <input id="token" type="password" placeholder="GitHub token">
+
+    <div style="height:12px"></div>
+
+    <div class="row">
+      <button class="btn" onclick="showQR()">QR ko‘rsatish</button>
+      <button class="btn secondary" onclick="downloadQR()">QR PNG</button>
+    </div>
+
+    <div id="status" class="muted" style="margin-top:10px"></div>
+
+    <hr style="margin:20px 0">
+
+    <!-- QR -->
+    <div>
+      <b>QR link</b>
+      <div id="qrLink" class="mono"></div>
+      <div id="qr" style="margin-top:12px"></div>
+    </div>
+
   </div>
+</main>
 
 <script>
-/** Repo sozlamalari */
-const REPO_OWNER = "Odamov490";
-const REPO_NAME  = "qr_code";
-const BRANCH     = "main";
+let qrInstance = null;
 
-const elId   = document.getElementById('id');
-const elFile = document.getElementById('pdfFile');
-const elTok  = document.getElementById('ghToken');
-const elLink = document.getElementById('link');
-const qrWrap = document.getElementById('qr');
-const status = document.getElementById('uploadStatus');
-
-let qr = null;
-
-function setStatus(msg, kind=""){
-  status.className = "status " + (kind || "");
-  status.textContent = msg;
+function makeLink(id) {
+  return location.origin + location.pathname.replace('admin.html','') +
+         'p.html?id=' + encodeURIComponent(id);
 }
 
-function baseUrl(){
-  const u = new URL(location.href);
-  u.pathname = u.pathname.replace(/\/admin\.html$/,'/');
-  return u.origin + u.pathname;
-}
-function makeLink(id){
-  return baseUrl() + 'p.html?id=' + encodeURIComponent(id);
-}
+function showQR() {
+  const id = document.getElementById('docId').value.trim();
+  if (!id) {
+    alert('ID kiriting');
+    return;
+  }
 
-function renderQR(){
-  const id = (elId.value || "").trim();
-  if(!id){ alert("ID kiriting"); return; }
   const link = makeLink(id);
-  elLink.textContent = link;
-  qrWrap.innerHTML = "";
-  qr = new QRCode(qrWrap, { text: link, width: 220, height: 220 });
+  document.getElementById('qrLink').textContent = link;
+
+  const qrBox = document.getElementById('qr');
+  qrBox.innerHTML = '';
+
+  qrInstance = new QRCode(qrBox, {
+    text: link,
+    width: 220,
+    height: 220
+  });
+
+  document.getElementById('status').textContent = 'QR tayyor';
 }
 
-document.getElementById('qrBtn').onclick = () => {
-  renderQR();
-  setStatus("QR ko‘rsatildi.", "ok");
-};
+function downloadQR() {
+  if (!qrInstance) {
+    alert('Avval QR yarating');
+    return;
+  }
 
-document.getElementById('qrPngBtn').onclick = () => {
-  if(!qr) renderQR();
-  const img = qrWrap.querySelector('img');
-  const canvas = qrWrap.querySelector('canvas');
-  let dataUrl = null;
-  if(img) dataUrl = img.src;
-  if(canvas) dataUrl = canvas.toDataURL('image/png');
-  if(!dataUrl){ alert("QR topilmadi"); return; }
+  const img = document.querySelector('#qr img');
+  const canvas = document.querySelector('#qr canvas');
+  const dataUrl = img ? img.src : canvas.toDataURL('image/png');
+
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = (elId.value.trim() || 'qr') + '.png';
+  a.download = (document.getElementById('docId').value || 'qr') + '.png';
   a.click();
-};
-
-/** GitHub helpers */
-async function ghGetFile(token, pathInRepo){
-  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}?ref=${BRANCH}`;
-  const res = await fetch(url, {
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Accept": "application/vnd.github+json"
-    }
-  });
-  if(res.status === 404) return { contentText: null, sha: null };
-  if(!res.ok) throw new Error(`GET ${pathInRepo}: ${res.status} ${await res.text()}`);
-  const data = await res.json();
-  const content = atob((data.content || "").replace(/\n/g, ""));
-  return { contentText: content, sha: data.sha };
 }
-
-async function ghPutFile({token, pathInRepo, contentBase64, message, sha}){
-  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}`;
-  const body = { message, content: contentBase64, branch: BRANCH };
-  if(sha) body.sha = sha;
-
-  const res = await fetch(url, {
-    method: "PUT",
-    headers: {
-      "Authorization": `Bearer ${token}`,
-      "Accept": "application/vnd.github+json",
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify(body)
-  });
-  if(!res.ok) throw new Error(`PUT ${pathInRepo}: ${res.status} ${await res.text()}`);
-  return await res.json();
-}
-
-function fileToBase64(file){
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onload = () => resolve(r.result.split(",")[1]);
-    r.onerror = reject;
-    r.readAsDataURL(file);
-  });
-}
-
-/** Upload */
-document.getElementById('uploadBtn').onclick = async () => {
-  try{
-    const id = (elId.value || "").trim();
-    if(!id){ alert("ID kiriting"); return; }
-
-    const token = (elTok.value || "").trim();
-    if(!token){ alert("Token kiriting"); return; }
-
-    const file = elFile.files[0];
-    if(!file){ alert("PDF tanlang"); return; }
-
-    // QR ni ham chiqarib qo'yamiz
-    renderQR();
-
-    setStatus("⏳ PDF yuklanmoqda...", "");
-
-    // PDF repo ichida: docs/pdfs/ID.pdf
-    const pdfRepoPath = `docs/pdfs/${id}.pdf`;
-
-    let pdfSha = null;
-    try{
-      const prev = await ghGetFile(token, pdfRepoPath);
-      pdfSha = prev.sha;
-    }catch(e){}
-
-    const pdfB64 = await fileToBase64(file);
-
-    await ghPutFile({
-      token,
-      pathInRepo: pdfRepoPath,
-      contentBase64: pdfB64,
-      message: `Upload PDF for ${id}`,
-      sha: pdfSha
-    });
-
-    setStatus("⏳ manifest yangilanmoqda...", "");
-
-    // manifest: docs/manifest.json
-    const manifestPath = "docs/manifest.json";
-    const { contentText, sha: manifestSha } = await ghGetFile(token, manifestPath);
-
-    let manifest = null;
-    if(contentText){
-      try{ manifest = JSON.parse(contentText); }catch{ manifest = null; }
-    }
-    if(!manifest) manifest = { generated_at: new Date().toISOString(), items: {} };
-    if(!manifest.items) manifest.items = {};
-
-    manifest.generated_at = new Date().toISOString();
-    manifest.items[id] = manifest.items[id] || { title: id, equipment: "", pdf: `pdfs/${id}.pdf`, tags: [] };
-    manifest.items[id].pdf = `pdfs/${id}.pdf`;
-
-    const manifestStr = JSON.stringify(manifest, null, 2);
-    const manifestB64 = btoa(unescape(encodeURIComponent(manifestStr)));
-
-    await ghPutFile({
-      token,
-      pathInRepo: manifestPath,
-      contentBase64: manifestB64,
-      message: `Update manifest for ${id}`,
-      sha: manifestSha
-    });
-
-    setStatus("✅ Tayyor! PDF yuklandi + ro‘yxat yangilanadi (10–30 soniya).", "ok");
-  }catch(err){
-    console.error(err);
-    setStatus("❌ Xato: " + err.message, "bad");
-  }
-};
-
-setStatus("—", "");
 </script>
 </body>
 </html>
