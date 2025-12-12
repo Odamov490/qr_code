@@ -1,105 +1,347 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="uz">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Admin — QR & PDF</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin — QR + PDF</title>
 
-  <!-- Stil -->
-  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="assets/style.css" />
 
-  <!-- QRCode kutubxonasi (MUHIM) -->
+  <!-- QRCode kutubxonasi -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
           crossorigin="anonymous"></script>
+
+  <style>
+    .wrap{max-width:980px;margin:0 auto;padding:18px}
+    .head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+    .head .sp{flex:1}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-top:14px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
+    .mini{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .status{margin-top:10px;font-size:13px;line-height:1.4;color:var(--muted)}
+    .status.ok{color:#065f46}
+    .status.bad{color:#b91c1c}
+    .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-all}
+    .hint{font-size:12px;color:var(--muted);margin-top:6px}
+  </style>
 </head>
 
 <body>
-<main class="container">
-  <div class="card">
+  <div class="wrap">
+    <div class="card">
+      <div class="head">
+        <div>
+          <h1 style="margin:0 0 6px 0">Admin</h1>
+          <div class="muted small">ID bo‘yicha QR doim bir xil. PDF’ni GitHub repo’ga yuklash / almashtirish / o‘chirish.</div>
+        </div>
+        <div class="sp"></div>
+        <a class="btn secondary" href="index.html">Ro‘yxat</a>
+      </div>
 
-    <div class="row">
-      <h1>Admin</h1>
-      <a class="btn secondary" href="index.html">Ro‘yxat</a>
+      <div class="grid">
+        <!-- LEFT -->
+        <div class="card" style="margin:0">
+          <div class="muted small">ID</div>
+          <input id="id" placeholder="Masalan: NX5" />
+
+          <div class="hint">PDF repo’da: <span class="mono">docs/pdfs/ID.pdf</span></div>
+
+          <div style="height:10px"></div>
+          <div class="muted small">PDF fayl (yuklash / almashtirish uchun)</div>
+          <input id="pdfFile" type="file" accept="application/pdf" />
+
+          <div style="height:10px"></div>
+          <div class="muted small">GitHub Token (fine-grained, Contents: Read & Write)</div>
+          <input id="ghToken" type="password" placeholder="Token..." />
+
+          <div class="mini">
+            <button class="btn" id="btnCheck">Tekshirish</button>
+            <button class="btn" id="btnUpload">Yuklash / Almashtirish</button>
+            <button class="btn secondary" id="btnDelete">O‘chirish</button>
+          </div>
+
+          <div class="mini">
+            <button class="btn secondary" id="btnQR">QR ko‘rsatish</button>
+            <button class="btn secondary" id="btnQRpng">QR PNG</button>
+          </div>
+
+          <div id="status" class="status">—</div>
+        </div>
+
+        <!-- RIGHT -->
+        <div class="card" style="margin:0">
+          <div class="muted small">QR link</div>
+          <div id="link" class="mono" style="margin:8px 0 10px 0">—</div>
+          <div id="qr" class="qrbox"></div>
+
+          <div style="height:12px"></div>
+          <div class="muted small">PDF link (Pages)</div>
+          <div id="pdfLink" class="mono">—</div>
+        </div>
+      </div>
     </div>
-
-    <!-- ID -->
-    <label>ID</label>
-    <input id="docId" placeholder="Masalan: NX5">
-
-    <!-- PDF -->
-    <label>PDF faylni tanlang</label>
-    <input type="file" id="pdfFile" accept="application/pdf">
-
-    <!-- Token -->
-    <label>GitHub Token</label>
-    <input id="token" type="password" placeholder="GitHub token">
-
-    <div style="height:12px"></div>
-
-    <div class="row">
-      <button class="btn" onclick="showQR()">QR ko‘rsatish</button>
-      <button class="btn secondary" onclick="downloadQR()">QR PNG</button>
-    </div>
-
-    <div id="status" class="muted" style="margin-top:10px"></div>
-
-    <hr style="margin:20px 0">
-
-    <!-- QR -->
-    <div>
-      <b>QR link</b>
-      <div id="qrLink" class="mono"></div>
-      <div id="qr" style="margin-top:12px"></div>
-    </div>
-
   </div>
-</main>
 
 <script>
+/** Repo sozlamalari */
+const REPO_OWNER = "Odamov490";
+const REPO_NAME  = "qr_code";
+const BRANCH     = "main";
+
+/** UI */
+const elId   = document.getElementById("id");
+const elFile = document.getElementById("pdfFile");
+const elTok  = document.getElementById("ghToken");
+const elSt   = document.getElementById("status");
+const elLink = document.getElementById("link");
+const elPdfL = document.getElementById("pdfLink");
+const qrWrap = document.getElementById("qr");
+
 let qrInstance = null;
 
-function makeLink(id) {
-  return location.origin + location.pathname.replace('admin.html','') +
-         'p.html?id=' + encodeURIComponent(id);
+function setStatus(msg, kind=""){
+  elSt.className = "status " + (kind || "");
+  elSt.textContent = msg;
 }
 
-function showQR() {
-  const id = document.getElementById('docId').value.trim();
-  if (!id) {
-    alert('ID kiriting');
-    return;
-  }
-
-  const link = makeLink(id);
-  document.getElementById('qrLink').textContent = link;
-
-  const qrBox = document.getElementById('qr');
-  qrBox.innerHTML = '';
-
-  qrInstance = new QRCode(qrBox, {
-    text: link,
-    width: 220,
-    height: 220
-  });
-
-  document.getElementById('status').textContent = 'QR tayyor';
+function idVal(){
+  return (elId.value || "").trim();
 }
 
-function downloadQR() {
-  if (!qrInstance) {
-    alert('Avval QR yarating');
-    return;
-  }
+function pagesBase(){
+  const u = new URL(location.href);
+  u.pathname = u.pathname.replace(/\/admin\.html$/,'/');
+  return u.origin + u.pathname;
+}
 
-  const img = document.querySelector('#qr img');
-  const canvas = document.querySelector('#qr canvas');
-  const dataUrl = img ? img.src : canvas.toDataURL('image/png');
+function makeQRLink(id){
+  return pagesBase() + "p.html?id=" + encodeURIComponent(id);
+}
 
-  const a = document.createElement('a');
+function pdfPagesPath(id){
+  return "pdfs/" + id + ".pdf";
+}
+
+function pdfPagesUrl(id){
+  return pagesBase() + pdfPagesPath(id);
+}
+
+function pdfRepoPath(id){
+  return "docs/pdfs/" + id + ".pdf";
+}
+
+/** QR */
+function renderQR(){
+  const id = idVal();
+  if(!id){ alert("ID kiriting"); return; }
+  const link = makeQRLink(id);
+  elLink.textContent = link;
+  elPdfL.textContent = pdfPagesUrl(id);
+
+  qrWrap.innerHTML = "";
+  qrInstance = new QRCode(qrWrap, { text: link, width: 220, height: 220 });
+}
+
+document.getElementById("btnQR").onclick = () => {
+  renderQR();
+  setStatus("QR tayyor.", "ok");
+};
+
+document.getElementById("btnQRpng").onclick = () => {
+  if(!qrInstance) renderQR();
+  const img = qrWrap.querySelector("img");
+  const canvas = qrWrap.querySelector("canvas");
+  const dataUrl = img ? img.src : (canvas ? canvas.toDataURL("image/png") : null);
+  if(!dataUrl){ alert("QR topilmadi"); return; }
+  const a = document.createElement("a");
   a.href = dataUrl;
-  a.download = (document.getElementById('docId').value || 'qr') + '.png';
+  a.download = (idVal() || "qr") + ".png";
   a.click();
+};
+
+/** GitHub API helpers */
+async function ghFetch(token, url, options={}){
+  const res = await fetch(url, {
+    ...options,
+    headers: {
+      "Authorization": `Bearer ${token}`,
+      "Accept": "application/vnd.github+json",
+      ...(options.headers || {})
+    }
+  });
+  return res;
 }
+
+async function ghGetContent(token, pathInRepo){
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}?ref=${BRANCH}`;
+  const res = await ghFetch(token, url);
+  if(res.status === 404) return { exists:false, sha:null, text:null };
+  if(!res.ok) throw new Error(`GET ${pathInRepo}: ${res.status} ${await res.text()}`);
+  const data = await res.json();
+  const text = data.content ? atob(data.content.replace(/\n/g,"")) : null;
+  return { exists:true, sha:data.sha, text };
+}
+
+async function ghPutContent(token, pathInRepo, base64Content, message, sha=null){
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}`;
+  const body = { message, content: base64Content, branch: BRANCH };
+  if(sha) body.sha = sha;
+
+  const res = await ghFetch(token, url, {
+    method:"PUT",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`PUT ${pathInRepo}: ${res.status} ${await res.text()}`);
+  return await res.json();
+}
+
+async function ghDeleteContent(token, pathInRepo, message, sha){
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}`;
+  const body = { message, sha, branch: BRANCH };
+
+  const res = await ghFetch(token, url, {
+    method:"DELETE",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(body)
+  });
+  if(!res.ok) throw new Error(`DELETE ${pathInRepo}: ${res.status} ${await res.text()}`);
+  return await res.json();
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result.split(",")[1]);
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function jsonToB64(obj){
+  const s = JSON.stringify(obj, null, 2);
+  return btoa(unescape(encodeURIComponent(s)));
+}
+
+/** manifest helper */
+async function loadManifest(token){
+  const p = "docs/manifest.json";
+  const r = await ghGetContent(token, p);
+  if(!r.exists || !r.text){
+    return { path:p, sha:null, manifest:{ generated_at:new Date().toISOString(), items:{} } };
+  }
+  let m = null;
+  try{ m = JSON.parse(r.text); } catch { m = null; }
+  if(!m) m = { generated_at:new Date().toISOString(), items:{} };
+  if(!m.items) m.items = {};
+  return { path:p, sha:r.sha, manifest:m };
+}
+
+async function saveManifest(token, manifestPath, manifestSha, manifest){
+  manifest.generated_at = new Date().toISOString();
+  const b64 = jsonToB64(manifest);
+  await ghPutContent(token, manifestPath, b64, "Update manifest", manifestSha);
+}
+
+/** Tekshirish */
+document.getElementById("btnCheck").onclick = async () => {
+  try{
+    const id = idVal();
+    if(!id){ alert("ID kiriting"); return; }
+    const token = (elTok.value || "").trim();
+    if(!token){ alert("Token kiriting"); return; }
+
+    renderQR();
+
+    const pdfPath = pdfRepoPath(id);
+    setStatus("Tekshirilmoqda...", "");
+    const pdf = await ghGetContent(token, pdfPath);
+
+    if(pdf.exists){
+      setStatus(`✅ PDF bor: ${pdfPath}`, "ok");
+    }else{
+      setStatus(`⚠️ PDF topilmadi: ${pdfPath}`, "");
+    }
+  }catch(e){
+    setStatus("❌ Xato: " + e.message, "bad");
+  }
+};
+
+/** Yuklash / almashtirish */
+document.getElementById("btnUpload").onclick = async () => {
+  try{
+    const id = idVal();
+    if(!id){ alert("ID kiriting"); return; }
+    const token = (elTok.value || "").trim();
+    if(!token){ alert("Token kiriting"); return; }
+    const file = elFile.files[0];
+    if(!file){ alert("PDF tanlang"); return; }
+
+    renderQR();
+
+    setStatus("⏳ PDF yuklanmoqda...", "");
+    const pdfPath = pdfRepoPath(id);
+
+    // bor bo'lsa sha olib update qilamiz
+    const prev = await ghGetContent(token, pdfPath);
+    const sha = prev.exists ? prev.sha : null;
+
+    const pdfB64 = await fileToBase64(file);
+    await ghPutContent(token, pdfPath, pdfB64, `Upload/Replace PDF for ${id}`, sha);
+
+    // manifest update
+    setStatus("⏳ manifest yangilanmoqda...", "");
+    const { path, sha: msha, manifest } = await loadManifest(token);
+    manifest.items[id] = manifest.items[id] || { title:id, equipment:"", pdf: pdfPagesPath(id), tags:[] };
+    manifest.items[id].pdf = pdfPagesPath(id);
+    if(!Array.isArray(manifest.items[id].tags)) manifest.items[id].tags = [];
+    await saveManifest(token, path, msha, manifest);
+
+    setStatus("✅ Tayyor! PDF yuklandi/almashtirildi. Ro‘yxat 10–30 soniyada yangilanadi.", "ok");
+  }catch(e){
+    setStatus("❌ Xato: " + e.message, "bad");
+  }
+};
+
+/** O‘chirish */
+document.getElementById("btnDelete").onclick = async () => {
+  try{
+    const id = idVal();
+    if(!id){ alert("ID kiriting"); return; }
+    const token = (elTok.value || "").trim();
+    if(!token){ alert("Token kiriting"); return; }
+
+    const ok = confirm(`Rostdan ham "${id}" PDF faylini o‘chirasizmi?\n\nBu: ${pdfRepoPath(id)}`);
+    if(!ok) return;
+
+    renderQR();
+
+    setStatus("⏳ PDF o‘chirilmoqda...", "");
+    const pdfPath = pdfRepoPath(id);
+    const prev = await ghGetContent(token, pdfPath);
+    if(!prev.exists){
+      setStatus("⚠️ PDF yo‘q (o‘chirish shart emas).", "");
+    }else{
+      await ghDeleteContent(token, pdfPath, `Delete PDF for ${id}`, prev.sha);
+      setStatus("✅ PDF o‘chirildi.", "ok");
+    }
+
+    // manifestdan ham olib tashlaymiz
+    setStatus("⏳ manifest yangilanmoqda...", "");
+    const { path, sha: msha, manifest } = await loadManifest(token);
+    if(manifest.items && manifest.items[id]){
+      delete manifest.items[id];
+      await saveManifest(token, path, msha, manifest);
+      setStatus("✅ PDF o‘chirildi + manifestdan ham olib tashlandi. (10–30s)", "ok");
+    }else{
+      setStatus("✅ PDF o‘chirildi. Manifestda bu ID yo‘q edi.", "ok");
+    }
+  }catch(e){
+    setStatus("❌ Xato: " + e.message, "bad");
+  }
+};
+
+setStatus("—", "");
 </script>
 </body>
 </html>
