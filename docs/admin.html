@@ -3,30 +3,26 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QR Admin — PDF yuklash</title>
+  <title>Admin — PDF yuklash</title>
 
   <link rel="stylesheet" href="assets/style.css" />
 
-  <!-- QR kutubxona -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"
     integrity="sha512-CNgIRecPoPFcAckU4iigFsMghvYDn8ApX2HFqRSbuuSSMzdg3NofM8JrIoVNewc0hXtF87Qy4V/mQJu1WDVYjA=="
     crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 
   <style>
-    .wrap{max-width:1050px;margin:0 auto;padding:18px}
+    .wrap{max-width:900px;margin:0 auto;padding:18px}
     .head{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
     .head .sp{flex:1}
-    .two{display:grid;grid-template-columns:1.1fr .9fr;gap:16px;margin-top:14px}
-    @media(max-width:950px){.two{grid-template-columns:1fr}}
-    .box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
-    .box .mono{word-break:break-all}
-    .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+    .grid{display:grid;grid-template-columns:1fr 320px;gap:14px;margin-top:14px}
+    @media(max-width:900px){.grid{grid-template-columns:1fr}}
     .status{margin-top:10px;font-size:13px;color:var(--muted);line-height:1.4}
     .status.ok{color:#065f46}
     .status.bad{color:#b91c1c}
-    .help{margin-top:10px}
-    .help details{background:#fff;border:1px solid var(--border);border-radius:12px;padding:12px}
-    .help summary{cursor:pointer;font-weight:700}
+    .mini{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .qrwrap{display:flex;flex-direction:column;gap:10px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; word-break:break-all}
   </style>
 </head>
 
@@ -35,97 +31,41 @@
     <div class="card">
       <div class="head">
         <div>
-          <h1 style="margin:0 0 6px 0">QR Admin (PDF yuklash)</h1>
-          <div class="muted small">
-            ID → QR → PDF tanlash → GitHub repo’ga yuklash → manifest avtomatik yangilanadi.
-          </div>
+          <h1 style="margin:0 0 6px 0">Admin</h1>
+          <div class="muted small">ID + PDF + Token → GitHub repo’ga yuklaydi (docs/pdfs/ID.pdf) va manifestni yangilaydi.</div>
         </div>
         <div class="sp"></div>
         <a class="btn secondary" href="index.html">Ro‘yxat</a>
       </div>
 
-      <div class="two">
+      <div class="grid">
         <!-- LEFT -->
         <div class="card" style="margin:0">
-          <h2 style="margin:0 0 10px 0">1) Ma’lumot</h2>
-
-          <div class="muted small">ID (QR doim shu ID bilan qoladi)</div>
+          <div class="muted small">ID</div>
           <input id="id" placeholder="Masalan: ESW8-000124" />
 
           <div style="height:10px"></div>
-          <div class="muted small">Hujjat nomi (ixtiyoriy)</div>
-          <input id="title" placeholder="Masalan: ESW8 yo‘riqnoma" />
+          <div class="muted small">PDF faylni tanlang</div>
+          <input id="pdfFile" type="file" accept="application/pdf" />
 
           <div style="height:10px"></div>
-          <div class="muted small">Uskuna (ixtiyoriy)</div>
-          <input id="eq" placeholder="Masalan: Rohde & Schwarz ESW8" />
+          <div class="muted small">GitHub Token (fine-grained, Contents: Read & Write)</div>
+          <input id="ghToken" type="password" placeholder="Token..." />
 
-          <div style="height:10px"></div>
-          <div class="muted small">PDF yo‘li (avto)</div>
-          <input id="pdf" placeholder="pdfs/ESW8-000124.pdf" />
-
-          <div class="actions">
-            <button class="btn" id="gen">QR yaratish</button>
-            <button class="btn secondary" id="copyLink">Link nusxa</button>
-            <button class="btn secondary" id="downloadQr">QR PNG</button>
+          <div class="mini">
+            <button class="btn" id="uploadBtn">⬆️ Yuklash</button>
+            <button class="btn secondary" id="qrBtn">QR ko‘rsatish</button>
+            <button class="btn secondary" id="qrPngBtn">QR PNG</button>
           </div>
 
-          <div style="margin-top:14px">
-            <h2 style="margin:0 0 10px 0">2) PDF tanlash + GitHub’ga yuklash</h2>
-
-            <div class="muted small">PDF faylni tanlang</div>
-            <input id="pdfFile" type="file" accept="application/pdf" />
-
-            <div style="height:10px"></div>
-            <div class="muted small">GitHub Token (fine-grained, Contents: Read & Write)</div>
-            <input id="ghToken" type="password" placeholder="Tokenni shu yerga kiriting (kodga yozmang)" />
-
-            <div class="actions">
-              <button class="btn" id="uploadBtn">⬆️ PDF’ni yuklash</button>
-              <button class="btn secondary" id="clearToken">Tokenni tozalash</button>
-              <a class="btn secondary" id="openPdf" href="#" target="_blank">PDF ochish</a>
-            </div>
-
-            <div id="uploadStatus" class="status">—</div>
-
-            <div class="help">
-              <details>
-                <summary>Tokenni qayerdan olaman?</summary>
-                <div class="muted small" style="margin-top:8px;line-height:1.6">
-                  GitHub → Settings → Developer settings → Fine-grained personal access tokens → Generate new token<br/>
-                  - Repository access: faqat <b>Odamov490/qr_code</b><br/>
-                  - Permissions: <b>Contents: Read and write</b><br/>
-                  Tokenni hech qachon repo ichiga yozmang (public).
-                </div>
-              </details>
-            </div>
-          </div>
+          <div id="uploadStatus" class="status">—</div>
         </div>
 
         <!-- RIGHT -->
-        <div class="card" style="margin:0">
-          <h2 style="margin:0 0 10px 0">QR</h2>
-
-          <div class="box">
-            <div class="muted small">QR link</div>
-            <div class="mono" id="link">—</div>
-          </div>
-
-          <div style="height:12px"></div>
-
+        <div class="card qrwrap" style="margin:0">
+          <div class="muted small">QR link</div>
+          <div class="mono" id="link">—</div>
           <div id="qr" class="qrbox"></div>
-
-          <div style="height:14px"></div>
-
-          <div class="muted small">
-            QR doim o‘zgarmaydi: link <span class="mono">p.html?id=ID</span> bo‘ladi.
-            PDF keyin yangilansa ham, bu QR o‘sha ID bilan ishlayveradi.
-          </div>
-
-          <div style="height:14px"></div>
-
-          <div class="muted small">manifest.json uchun (avto update qilinadi, lekin ko‘rib turish uchun)</div>
-          <textarea id="json" rows="10" style="margin-top:8px"></textarea>
         </div>
       </div>
     </div>
@@ -137,20 +77,12 @@ const REPO_OWNER = "Odamov490";
 const REPO_NAME  = "qr_code";
 const BRANCH     = "main";
 
-/** UI elementlar */
-const elId    = document.getElementById('id');
-const elTitle = document.getElementById('title');
-const elEq    = document.getElementById('eq');
-const elPdf   = document.getElementById('pdf');
-const elLink  = document.getElementById('link');
-const elJson  = document.getElementById('json');
-const qrWrap  = document.getElementById('qr');
-
-const elFile  = document.getElementById('pdfFile');
-const elTok   = document.getElementById('ghToken');
-const status  = document.getElementById('uploadStatus');
-
-const openPdfA = document.getElementById('openPdf');
+const elId   = document.getElementById('id');
+const elFile = document.getElementById('pdfFile');
+const elTok  = document.getElementById('ghToken');
+const elLink = document.getElementById('link');
+const qrWrap = document.getElementById('qr');
+const status = document.getElementById('uploadStatus');
 
 let qr = null;
 
@@ -168,48 +100,22 @@ function makeLink(id){
   return baseUrl() + 'p.html?id=' + encodeURIComponent(id);
 }
 
-function ensurePdfPath(id){
-  if(!elPdf.value.trim()){
-    elPdf.value = 'pdfs/' + id + '.pdf';
-  }
-  // o‘ng tomondagi "PDF ochish" tugmasi (Pages link)
-  openPdfA.href = elPdf.value.trim();
-}
-
-/** QR yaratish */
-document.getElementById('gen').onclick = () => {
-  const id = (elId.value || '').trim();
+function renderQR(){
+  const id = (elId.value || "").trim();
   if(!id){ alert("ID kiriting"); return; }
-
-  ensurePdfPath(id);
-
   const link = makeLink(id);
   elLink.textContent = link;
-
-  qrWrap.innerHTML = '';
-  qr = new QRCode(qrWrap, { text: link, width: 240, height: 240 });
-
-  // manifest bo‘lagi (ko‘rish uchun)
-  const item = {
-    title: (elTitle.value || id).trim(),
-    equipment: (elEq.value || "").trim(),
-    pdf: ensurePdfReturn(),
-    tags: []
-  };
-  elJson.value = JSON.stringify({ [id]: item }, null, 2);
-
-  setStatus("✅ QR yaratildi. Endi PDF tanlab yuklashingiz mumkin.", "ok");
-};
-
-function ensurePdfReturn(){
-  const id = (elId.value || '').trim();
-  if(id) ensurePdfPath(id);
-  return (elPdf.value || '').trim();
+  qrWrap.innerHTML = "";
+  qr = new QRCode(qrWrap, { text: link, width: 220, height: 220 });
 }
 
-/** QR PNG yuklab olish */
-document.getElementById('downloadQr').onclick = () => {
-  if(!qr){ alert("Avval QR yarating"); return; }
+document.getElementById('qrBtn').onclick = () => {
+  renderQR();
+  setStatus("QR ko‘rsatildi.", "ok");
+};
+
+document.getElementById('qrPngBtn').onclick = () => {
+  if(!qr) renderQR();
   const img = qrWrap.querySelector('img');
   const canvas = qrWrap.querySelector('canvas');
   let dataUrl = null;
@@ -222,23 +128,7 @@ document.getElementById('downloadQr').onclick = () => {
   a.click();
 };
 
-document.getElementById('copyLink').onclick = async () => {
-  const text = elLink.textContent || "";
-  if(!text || text === "—"){ alert("Avval QR yarating"); return; }
-  try{
-    await navigator.clipboard.writeText(text);
-    setStatus("✅ Link nusxalandi", "ok");
-  }catch{
-    setStatus("⚠️ Clipboard ruxsat bermadi", "bad");
-  }
-};
-
-document.getElementById('clearToken').onclick = () => {
-  elTok.value = "";
-  setStatus("Token tozalandi.", "");
-};
-
-/** GitHub API helper: GET json + sha */
+/** GitHub helpers */
 async function ghGetFile(token, pathInRepo){
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}?ref=${BRANCH}`;
   const res = await fetch(url, {
@@ -254,7 +144,6 @@ async function ghGetFile(token, pathInRepo){
   return { contentText: content, sha: data.sha };
 }
 
-/** GitHub API helper: PUT file (create/update) */
 async function ghPutFile({token, pathInRepo, contentBase64, message, sha}){
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${pathInRepo}`;
   const body = { message, content: contentBase64, branch: BRANCH };
@@ -269,12 +158,10 @@ async function ghPutFile({token, pathInRepo, contentBase64, message, sha}){
     },
     body: JSON.stringify(body)
   });
-
   if(!res.ok) throw new Error(`PUT ${pathInRepo}: ${res.status} ${await res.text()}`);
   return await res.json();
 }
 
-/** File -> base64 (content uchun) */
 function fileToBase64(file){
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -284,37 +171,34 @@ function fileToBase64(file){
   });
 }
 
-/** Upload tugmasi */
+/** Upload */
 document.getElementById('uploadBtn').onclick = async () => {
   try{
     const id = (elId.value || "").trim();
     if(!id){ alert("ID kiriting"); return; }
 
     const token = (elTok.value || "").trim();
-    if(!token){ alert("GitHub token kiriting"); return; }
+    if(!token){ alert("Token kiriting"); return; }
 
     const file = elFile.files[0];
-    if(!file){ alert("PDF fayl tanlang"); return; }
+    if(!file){ alert("PDF tanlang"); return; }
 
-    // QR yaratib qo‘yamiz (link/QR ko‘rinsin)
-    if(!qr){ document.getElementById('gen').click(); }
+    // QR ni ham chiqarib qo'yamiz
+    renderQR();
 
-    // PDF yo‘li
-    ensurePdfPath(id);
-    const pdfPagesPath = ensurePdfReturn(); // p.html ichida ishlatiladigan (pdfs/ID.pdf)
-    const pdfRepoPath  = `docs/${pdfPagesPath}`; // GitHub repo ichida real joy: docs/pdfs/ID.pdf
+    setStatus("⏳ PDF yuklanmoqda...", "");
 
-    setStatus("⏳ PDF GitHub’ga yuklanmoqda...", "");
+    // PDF repo ichida: docs/pdfs/ID.pdf
+    const pdfRepoPath = `docs/pdfs/${id}.pdf`;
 
-    // mavjud PDF sha (update bo‘lsa kerak)
     let pdfSha = null;
     try{
       const prev = await ghGetFile(token, pdfRepoPath);
       pdfSha = prev.sha;
-    }catch(e){ /* e'tibor bermaymiz */ }
+    }catch(e){}
 
-    // PDF upload
     const pdfB64 = await fileToBase64(file);
+
     await ghPutFile({
       token,
       pathInRepo: pdfRepoPath,
@@ -323,9 +207,9 @@ document.getElementById('uploadBtn').onclick = async () => {
       sha: pdfSha
     });
 
-    setStatus("⏳ manifest.json yangilanmoqda...", "");
+    setStatus("⏳ manifest yangilanmoqda...", "");
 
-    // manifest.json o‘qish (bor bo‘lsa)
+    // manifest: docs/manifest.json
     const manifestPath = "docs/manifest.json";
     const { contentText, sha: manifestSha } = await ghGetFile(token, manifestPath);
 
@@ -334,21 +218,12 @@ document.getElementById('uploadBtn').onclick = async () => {
       try{ manifest = JSON.parse(contentText); }catch{ manifest = null; }
     }
     if(!manifest) manifest = { generated_at: new Date().toISOString(), items: {} };
-
-    // item yozish/yangi
-    manifest.generated_at = new Date().toISOString();
     if(!manifest.items) manifest.items = {};
 
-    const title = (elTitle.value || id).trim();
-    const eq = (elEq.value || "").trim();
+    manifest.generated_at = new Date().toISOString();
+    manifest.items[id] = manifest.items[id] || { title: id, equipment: "", pdf: `pdfs/${id}.pdf`, tags: [] };
+    manifest.items[id].pdf = `pdfs/${id}.pdf`;
 
-    manifest.items[id] = manifest.items[id] || { title, equipment: eq, pdf: pdfPagesPath, tags: [] };
-    manifest.items[id].title = title;
-    manifest.items[id].equipment = eq;
-    manifest.items[id].pdf = pdfPagesPath;
-    if(!Array.isArray(manifest.items[id].tags)) manifest.items[id].tags = [];
-
-    // manifestni PUT qilish
     const manifestStr = JSON.stringify(manifest, null, 2);
     const manifestB64 = btoa(unescape(encodeURIComponent(manifestStr)));
 
@@ -360,24 +235,12 @@ document.getElementById('uploadBtn').onclick = async () => {
       sha: manifestSha
     });
 
-    // UI yangilash
-    elJson.value = JSON.stringify({ [id]: manifest.items[id] }, null, 2);
-
-    setStatus("✅ Tayyor! PDF yuklandi + manifest yangilandi. 10–30 soniyada ro‘yxatda chiqadi.", "ok");
+    setStatus("✅ Tayyor! PDF yuklandi + ro‘yxat yangilanadi (10–30 soniya).", "ok");
   }catch(err){
     console.error(err);
     setStatus("❌ Xato: " + err.message, "bad");
   }
 };
-
-// ID yozilganda PDF yo‘lini avto to‘ldirish
-elId.addEventListener('input', () => {
-  const id = (elId.value || "").trim();
-  if(id && !elPdf.value.trim()){
-    elPdf.value = "pdfs/" + id + ".pdf";
-  }
-  if(id) openPdfA.href = (elPdf.value || "").trim() || "#";
-});
 
 setStatus("—", "");
 </script>
