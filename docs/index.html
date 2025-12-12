@@ -1,0 +1,38 @@
+<!doctype html><html lang="uz"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PDF QR — Ro‘yxat</title><link rel="stylesheet" href="assets/style.css"/>
+</head><body>
+<main class="container"><div class="card">
+<div class="row">
+  <div><h1>PDF QR — Ro‘yxat</h1><div class="muted small">GitHub Pages (serversiz). QR doim bir xil qoladi.</div></div>
+  <div class="spacer"></div><a class="btn secondary" href="admin.html">QR yaratish</a>
+</div>
+<div style="margin-top:14px"><input id="q" placeholder="Qidirish: ID / uskuna / nom..."/></div>
+<div class="table" style="margin-top:14px">
+  <div class="thead"><div>ID</div><div>Nomi / Uskuna</div><div>Link</div></div>
+  <div id="rows"></div>
+</div>
+<div style="margin-top:14px" class="muted small">
+PDF keyin yangilansa ham QR o‘zgarmaydi: <span class="mono">pdfs/ID.pdf</span> faylni almashtiring yoki manifestdagi <span class="mono">pdf</span> yo‘lini yangilang.
+</div>
+</div></main>
+<script>
+const rowsEl=document.getElementById('rows'); const qEl=document.getElementById('q'); let data=null;
+async function load(){const res=await fetch('manifest.json?ts='+Date.now()); data=await res.json(); render();}
+function esc(s){return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function render(){
+  const q=(qEl.value||'').toLowerCase().trim(); const items=data?.items||{}; const keys=Object.keys(items).sort();
+  rowsEl.innerHTML='';
+  keys.forEach(code=>{
+    const it=items[code];
+    const hay=(code+' '+(it.title||'')+' '+(it.equipment||'')+' '+(it.tags||[]).join(',')).toLowerCase();
+    if(q && !hay.includes(q)) return;
+    const link=`p.html?id=${encodeURIComponent(code)}`;
+    const div=document.createElement('div'); div.className='trow';
+    div.innerHTML=`<div class="mono">${esc(code)}</div><div><div><b>${esc(it.title||'')}</b></div><div class="muted small">${esc(it.equipment||'')}</div></div><div><a href="${link}">Ochish</a></div>`;
+    rowsEl.appendChild(div);
+  });
+}
+qEl.addEventListener('input', render); load();
+</script>
+</body></html>

@@ -1,0 +1,14 @@
+{
+  "generated_at": "2025-12-12T10:47:38.782129Z",
+  "items": {
+    "ESW8-000124": {
+      "title": "ESW8 — Yo‘riqnoma (namuna)",
+      "equipment": "Rohde & Schwarz ESW8",
+      "pdf": "pdfs/ESW8-000124.pdf",
+      "tags": [
+        "ESW8",
+        "EMC"
+      ]
+    }
+  }
+}

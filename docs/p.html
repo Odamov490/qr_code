@@ -1,0 +1,22 @@
+<!doctype html><html lang="uz"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>PDF</title><link rel="stylesheet" href="assets/style.css"/>
+</head><body>
+<main class="container"><div class="card" id="card"><div class="muted">Yuklanmoqda…</div></div></main>
+<script>
+function getParam(n){return new URL(location.href).searchParams.get(n);}
+function esc(s){return (s||'').toString().replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+(async function(){
+  const id=getParam('id'); const card=document.getElementById('card');
+  if(!id){card.innerHTML=`<h1>Xato</h1><div class="muted">id param yo‘q. Masalan: p.html?id=ESW8-000124</div>`; return;}
+  const res=await fetch('manifest.json?ts='+Date.now()); const data=await res.json(); const it=data.items?.[id];
+  if(!it){card.innerHTML=`<h1>Topilmadi</h1><div class="muted">ID: <span class="mono">${esc(id)}</span></div>`; return;}
+  const pdf=it.pdf;
+  card.innerHTML=`<div class="row"><div><div class="muted small">ID</div><div class="mono" style="font-size:22px;font-weight:800">${esc(id)}</div></div><div class="spacer"></div><a class="btn secondary" href="index.html">Ro‘yxat</a></div>
+  <h1 style="margin-top:12px">${esc(it.title||'')}</h1>
+  ${it.equipment?`<div class="muted">Uskuna: ${esc(it.equipment)}</div>`:''}
+  <div style="margin-top:14px" class="row"><a class="btn" href="${pdf}" target="_blank">📄 PDF ochish</a><a class="btn secondary" href="${pdf}" download>⬇️ Yuklab olish</a></div>
+  <div style="margin-top:14px" class="muted small">PDF yo‘li: <span class="mono">${esc(pdf)}</span></div>`;
+})();
+</script>
+</body></html>

@@ -1,0 +1,79 @@
+<!doctype html><html lang="uz"><head>
+<meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>QR yaratish</title><link rel="stylesheet" href="assets/style.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" integrity="sha512-CNgIRecPoPFcAckU4iigFsMghvYDn8ApX2HFqRSbuuSSMzdg3NofM8JrIoVNewc0hXtF87Qy4V/mQJu1WDVYjA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+</head><body>
+<main class="container"><div class="card">
+<div class="row"><div><h1>QR yaratish (serversiz)</h1><div class="muted small">PDF yuklash — GitHub commit orqali. Bu sahifa QR va manifest yozuvi uchun.</div></div><div class="spacer"></div><a class="btn secondary" href="index.html">Ro‘yxat</a></div>
+
+<div class="grid" style="margin-top:14px">
+  <div>
+    <h2>1) Ma’lumot</h2>
+    <div class="muted small">ID (QR doim shu ID bilan qoladi)</div>
+    <input id="id" placeholder="Masalan: ESW8-000124"/>
+    <div style="height:10px"></div>
+    <div class="muted small">Hujjat nomi</div>
+    <input id="title" placeholder="Masalan: ESW8 yo‘riqnoma"/>
+    <div style="height:10px"></div>
+    <div class="muted small">Uskuna</div>
+    <input id="eq" placeholder="Masalan: Rohde & Schwarz ESW8"/>
+    <div style="height:10px"></div>
+    <div class="muted small">PDF yo‘li (repo ichida)</div>
+    <input id="pdf" placeholder="pdfs/ESW8-000124.pdf"/>
+    <div style="height:14px"></div>
+    <button class="btn" id="gen">QR yaratish</button>
+    <button class="btn secondary" id="sample">Namuna</button>
+    <div style="height:14px"></div>
+    <div class="muted small">QR link: <span class="mono" id="link"></span></div>
+  </div>
+
+  <div>
+    <h2>2) QR</h2>
+    <div id="qr" class="qrbox"></div>
+    <div style="height:10px"></div>
+    <button class="btn secondary" id="download">QR PNG yuklab olish</button>
+  </div>
+</div>
+
+<div style="margin-top:18px">
+  <h2>3) manifest.json uchun (copy/paste)</h2>
+  <div class="muted small"><span class="mono">docs/manifest.json</span> → <span class="mono">items</span> ichiga qo‘shasiz.</div>
+  <textarea id="json" rows="8" style="margin-top:10px"></textarea>
+</div>
+
+</div></main>
+
+<script>
+const elId=document.getElementById('id'), elTitle=document.getElementById('title'), elEq=document.getElementById('eq'), elPdf=document.getElementById('pdf');
+const elLink=document.getElementById('link'), elJson=document.getElementById('json'), qrWrap=document.getElementById('qr');
+let qr=null;
+
+function baseUrl(){
+  const u=new URL(location.href);
+  u.pathname=u.pathname.replace(/\/admin\.html$/,'/'); 
+  return u.origin+u.pathname;
+}
+function makeLink(id){return baseUrl()+'p.html?id='+encodeURIComponent(id);}
+
+document.getElementById('sample').onclick=()=>{
+  const id='DOC-'+String(Math.floor(Math.random()*900000)+100000);
+  elId.value=id; elTitle.value='Uskuna yo‘riqnomasi'; elEq.value='Laboratoriya uskunasi'; elPdf.value='pdfs/'+id+'.pdf';
+};
+
+document.getElementById('gen').onclick=()=>{
+  const id=(elId.value||'').trim();
+  if(!id){alert('ID kiriting'); return;}
+  const link=makeLink(id); elLink.textContent=link;
+  qrWrap.innerHTML=''; qr=new QRCode(qrWrap,{text:link,width:220,height:220});
+  const item={title:(elTitle.value||'').trim(),equipment:(elEq.value||'').trim(),pdf:(elPdf.value||('pdfs/'+id+'.pdf')).trim(),tags:[]};
+  elJson.value=JSON.stringify({[id]:item},null,2);
+};
+
+document.getElementById('download').onclick=()=>{
+  if(!qr){alert('Avval QR yarating'); return;}
+  const img=qrWrap.querySelector('img'); const canvas=qrWrap.querySelector('canvas');
+  let dataUrl=null; if(img) dataUrl=img.src; if(canvas) dataUrl=canvas.toDataURL('image/png');
+  const a=document.createElement('a'); a.href=dataUrl; a.download=(elId.value.trim()||'qr')+'.png'; a.click();
+};
+</script>
+</body></html>
